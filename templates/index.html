@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Planificateur Dragodindes</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="page">
+    <header class="hero">
+      <p class="eyebrow">FastAPI v2</p>
+      <h1>Planificateur Dragodindes</h1>
+      <p class="lede">
+        Petite interface web inspiree du classeur Excel pour saisir le stock,
+        calculer une session et lire les tableaux de pilotage.
+      </p>
+    </header>
+
+    <section class="panel">
+      <h2>Parametres et stock</h2>
+      <form method="post" class="stock-form">
+        <div class="session-row">
+          <label for="session_capacity">Capacite de session (individus)</label>
+          <input
+            id="session_capacity"
+            name="session_capacity"
+            type="number"
+            min="2"
+            step="2"
+            value="{{ session_capacity }}"
+          >
+        </div>
+
+        <div class="stock-grid">
+          {% for row in stock_rows %}
+          <fieldset class="stock-card">
+            <legend>{{ row.name }}</legend>
+            <p class="muted">Generation {{ row.generation }}</p>
+            <label for="m_{{ row.name }}">Males</label>
+            <input id="m_{{ row.name }}" name="m_{{ row.name }}" type="number" min="0" value="{{ row.males }}">
+            <label for="f_{{ row.name }}">Femelles</label>
+            <input id="f_{{ row.name }}" name="f_{{ row.name }}" type="number" min="0" value="{{ row.females }}">
+          </fieldset>
+          {% endfor %}
+        </div>
+
+        <button type="submit" class="primary-btn">Calculer le plan</button>
+      </form>
+    </section>
+
+    <section class="panel summary-grid">
+      <article class="stat">
+        <span class="stat-label">Individus croises</span>
+        <strong>{{ results.controls["Individus planifies depuis croisements"] }}</strong>
+      </article>
+      <article class="stat">
+        <span class="stat-label">Paires G1 ajoutees</span>
+        <strong>{{ results.controls["Paires G1 ajoutees"] }}</strong>
+      </article>
+      <article class="stat">
+        <span class="stat-label">Total individus</span>
+        <strong>{{ results.controls["Total individus a prendre"] }}</strong>
+      </article>
+      <article class="stat">
+        <span class="stat-label">Ecart vs objectif</span>
+        <strong>{{ results.controls["Ecart"] }}</strong>
+      </article>
+    </section>
+
+    <section class="panel">
+      <h2>Controle</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Controle</th>
+            <th>Valeur</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for key, value in results.controls.items() %}
+          <tr>
+            <td>{{ key }}</td>
+            <td>{{ value }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+
+    <section class="panel">
+      <h2>Selection_auto</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Cible</th>
+            <th>Gen</th>
+            <th>Parent 1</th>
+            <th>Parent 2</th>
+            <th>Paires restantes avant</th>
+            <th>Option A</th>
+            <th>Option B</th>
+            <th>Mode choisi</th>
+            <th>Paires creees</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in results.selection_rows %}
+          <tr>
+            <td>{{ row.target }}</td>
+            <td>{{ row.generation }}</td>
+            <td>{{ row.parent1 }}</td>
+            <td>{{ row.parent2 }}</td>
+            <td>{{ row.remaining_pairs_before }}</td>
+            <td>{{ row.option_a }}</td>
+            <td>{{ row.option_b }}</td>
+            <td>{{ row.chosen_mode }}</td>
+            <td>{{ row.pairs_created }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+
+    <section class="panel">
+      <h2>Tableau_final</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              {% for key in results.final_rows[0].keys() %}
+              <th>{{ key }}</th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in results.final_rows %}
+            <tr>
+              {% for value in row.values() %}
+              <td>{{ value }}</td>
+              {% endfor %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <h3>Recapitulatif par generation</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Generation</th>
+            <th>Individus a prendre</th>
+            <th>Paires</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in results.tableau_generation_summary %}
+          <tr>
+            <td>{{ row.Generation }}</td>
+            <td>{{ row["Individus a prendre"] }}</td>
+            <td>{{ row.Paires }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+
+    <section class="panel two-col">
+      <div>
+        <h2>Recap_creation</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                {% for key in results.recap_creation_rows[0].keys() %}
+                <th>{{ key }}</th>
+                {% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in results.recap_creation_rows %}
+              <tr>
+                {% for value in row.values() %}
+                <td>{{ value }}</td>
+                {% endfor %}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div>
+        <h2>Ratios_G10</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                {% for key in results.ratios_rows[0].keys() %}
+                <th>{{ key }}</th>
+                {% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in results.ratios_rows %}
+              <tr>
+                {% for value in row.values() %}
+                <td>{{ value }}</td>
+                {% endfor %}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Plan_optimal</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              {% for key in results.plan_rows[0].keys() %}
+              <th>{{ key }}</th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in results.plan_rows %}
+            <tr>
+              {% for value in row.values() %}
+              <td>{{ value }}</td>
+              {% endfor %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</body>
+</html>
