@@ -268,6 +268,7 @@
         </div>
         <p class="section-note">Tableau final a utiliser pour preparer ta session.</p>
       </div>
+      {% if results.plan_rows %}
       <div class="table-wrap">
         <table>
           <thead>
@@ -292,6 +293,9 @@
           </tbody>
         </table>
       </div>
+      {% else %}
+      <p class="empty-state">Aucun stock a prendre pour cette configuration sans remplissage automatique de Gen 1.</p>
+      {% endif %}
     </section>
   </div>
 </body>

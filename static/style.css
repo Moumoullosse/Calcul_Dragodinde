@@ -340,6 +340,16 @@ input:focus {
   background: rgba(255, 252, 247, 0.88);
 }
 
+.empty-state {
+  margin: 0;
+  padding: 18px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-md);
+  background: rgba(255, 250, 244, 0.85);
+  color: var(--muted);
+  line-height: 1.5;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
