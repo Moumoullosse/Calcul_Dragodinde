@@ -9,27 +9,41 @@
 <body>
   <div class="page">
     <header class="hero">
-      <p class="eyebrow">FastAPI v2</p>
+      <p class="eyebrow">Planificateur d'elevage</p>
       <h1>Planificateur Dragodindes</h1>
       <p class="lede">
-        Petite interface web inspiree du classeur Excel pour saisir le stock,
-        calculer une session et lire les tableaux de pilotage.
+        Renseigne ton stock actuel, lance le calcul, puis consulte directement
+        le stock a prendre pour ta session.
       </p>
+      <div class="hero-tags">
+        <span class="hero-tag">Saisie rapide</span>
+        <span class="hero-tag">Lecture simple</span>
+        <span class="hero-tag">Resultat immediat</span>
+      </div>
     </header>
 
     <section class="panel">
-      <h2>Parametres et stock</h2>
+      <div class="section-head">
+        <div>
+          <p class="section-kicker">Preparation</p>
+          <h2>Parametres et stock</h2>
+        </div>
+        <p class="section-note">Renseigne les quantites disponibles pour chaque dragodinde.</p>
+      </div>
       <form method="post" class="stock-form">
         <div class="session-row">
-          <label for="session_capacity">Capacite de session (individus)</label>
-          <input
-            id="session_capacity"
-            name="session_capacity"
-            type="number"
-            min="2"
-            step="2"
-            value="{{ session_capacity }}"
-          >
+          <div class="session-card">
+            <label for="session_capacity">Capacite de session</label>
+            <p class="field-help">Nombre total d'individus a prevoir pour la session.</p>
+            <input
+              id="session_capacity"
+              name="session_capacity"
+              type="number"
+              min="2"
+              step="2"
+              value="{{ session_capacity }}"
+            >
+          </div>
         </div>
 
         <div class="stock-grid">
@@ -37,15 +51,23 @@
           <fieldset class="stock-card">
             <legend>{{ row.name }}</legend>
             <p class="muted">Generation {{ row.generation }}</p>
-            <label for="m_{{ row.name }}">Males</label>
-            <input id="m_{{ row.name }}" name="m_{{ row.name }}" type="number" min="0" value="{{ row.males }}">
-            <label for="f_{{ row.name }}">Femelles</label>
-            <input id="f_{{ row.name }}" name="f_{{ row.name }}" type="number" min="0" value="{{ row.females }}">
+            <div class="stock-fields">
+              <div>
+                <label for="m_{{ row.name }}">Males</label>
+                <input id="m_{{ row.name }}" name="m_{{ row.name }}" type="number" min="0" value="{{ row.males }}">
+              </div>
+              <div>
+                <label for="f_{{ row.name }}">Femelles</label>
+                <input id="f_{{ row.name }}" name="f_{{ row.name }}" type="number" min="0" value="{{ row.females }}">
+              </div>
+            </div>
           </fieldset>
           {% endfor %}
         </div>
 
-        <button type="submit" class="primary-btn">Calculer le plan</button>
+        <div class="form-actions">
+          <button type="submit" class="primary-btn">Calculer le stock a prendre</button>
+        </div>
       </form>
     </section>
 
@@ -226,21 +248,31 @@
     {% endif %}
 
     <section class="panel">
-      <h2>Plan_optimal</h2>
+      <div class="section-head">
+        <div>
+          <p class="section-kicker">Resultat</p>
+          <h2>Stock a prendre</h2>
+        </div>
+        <p class="section-note">Tableau final a utiliser pour preparer ta session.</p>
+      </div>
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
               {% for key in results.plan_rows[0].keys() %}
+              {% if key not in ["Source", "% cible G10", "Commentaire"] %}
               <th>{{ key }}</th>
+              {% endif %}
               {% endfor %}
             </tr>
           </thead>
           <tbody>
             {% for row in results.plan_rows %}
             <tr>
-              {% for value in row.values() %}
+              {% for key, value in row.items() %}
+              {% if key not in ["Source", "% cible G10", "Commentaire"] %}
               <td>{{ value }}</td>
+              {% endif %}
               {% endfor %}
             </tr>
             {% endfor %}
