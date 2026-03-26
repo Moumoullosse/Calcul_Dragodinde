@@ -36,8 +36,13 @@ def _serialize_results(results: dict[str, object]) -> dict[str, object]:
     }
 
 
-def _render(request: Request, stock: dict[str, StockEntry], session_capacity: int) -> HTMLResponse:
-    results = _serialize_results(plan_session(stock, session_capacity))
+def _render(
+    request: Request,
+    stock: dict[str, StockEntry],
+    session_capacity: int,
+    include_auto_fill_g1: bool,
+) -> HTMLResponse:
+    results = _serialize_results(plan_session(stock, session_capacity, include_auto_fill_g1))
     stock_rows = [
         {
             "name": breed.name,
@@ -53,6 +58,7 @@ def _render(request: Request, stock: dict[str, StockEntry], session_capacity: in
         {
             "stock_rows": stock_rows,
             "session_capacity": session_capacity,
+            "include_auto_fill_g1": include_auto_fill_g1,
             "results": results,
         },
     )
@@ -60,7 +66,7 @@ def _render(request: Request, stock: dict[str, StockEntry], session_capacity: in
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request) -> HTMLResponse:
-    return _render(request, default_stock(), SESSION_INDIVIDUAL_CAPACITY)
+    return _render(request, default_stock(), SESSION_INDIVIDUAL_CAPACITY, True)
 
 
 @app.post("/", response_class=HTMLResponse)
@@ -69,5 +75,7 @@ async def calculate(
     session_capacity: int = Form(SESSION_INDIVIDUAL_CAPACITY),
 ) -> HTMLResponse:
     form = await request.form()
-    stock = _stock_from_form(dict(form))
-    return _render(request, stock, session_capacity)
+    form_data = dict(form)
+    stock = _stock_from_form(form_data)
+    include_auto_fill_g1 = "include_auto_fill_g1" in form_data
+    return _render(request, stock, session_capacity, include_auto_fill_g1)

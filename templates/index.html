@@ -44,6 +44,19 @@
               value="{{ session_capacity }}"
             >
           </div>
+          <label class="toggle-card" for="include_auto_fill_g1">
+            <input
+              id="include_auto_fill_g1"
+              name="include_auto_fill_g1"
+              type="checkbox"
+              value="1"
+              {% if include_auto_fill_g1 %}checked{% endif %}
+            >
+            <span class="toggle-copy">
+              <span class="toggle-title">Remplissage automatique Gen 1</span>
+              <span class="toggle-help">Complete automatiquement avec Amande, Dore et Rousse si la session n'est pas remplie.</span>
+            </span>
+          </label>
         </div>
 
         <div class="stock-grid">

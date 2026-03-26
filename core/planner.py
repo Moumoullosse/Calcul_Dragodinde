@@ -92,7 +92,11 @@ def _compute_usage_map(selection_rows: list[SelectionRow]) -> dict[str, dict[str
     return usage
 
 
-def plan_session(stock: dict[str, StockEntry], session_capacity: int = SESSION_INDIVIDUAL_CAPACITY) -> dict[str, object]:
+def plan_session(
+    stock: dict[str, StockEntry],
+    session_capacity: int = SESSION_INDIVIDUAL_CAPACITY,
+    include_auto_fill_g1: bool = True,
+) -> dict[str, object]:
     capacity_pairs = max(session_capacity // 2, 0)
     available = {name: StockEntry(entry.males, entry.females) for name, entry in stock.items()}
 
@@ -163,8 +167,8 @@ def plan_session(stock: dict[str, StockEntry], session_capacity: int = SESSION_I
             remaining_pairs_before = max(0, remaining_pairs_before - pairs_created)
 
     planned_pairs = sum(row.pairs_created for row in selection_rows)
-    auto_fill_pairs = max(0, capacity_pairs - planned_pairs)
-    auto_fill = _build_auto_fill_pairs(auto_fill_pairs)
+    auto_fill_pairs = max(0, capacity_pairs - planned_pairs) if include_auto_fill_g1 else 0
+    auto_fill = _build_auto_fill_pairs(auto_fill_pairs) if include_auto_fill_g1 else {}
     usage_map = _compute_usage_map(selection_rows)
     total_individuals = planned_pairs * 2 + auto_fill_pairs * 2
 
@@ -273,8 +277,8 @@ def plan_session(stock: dict[str, StockEntry], session_capacity: int = SESSION_I
         {
             "Dragodinde": row["Dragodinde"],
             "Gen": row["Gen"],
-            "Males a prendre": row["Males a prendre total"],
-            "Femelles a prendre": row["Femelles a prendre total"],
+            "Males a prendre": f'{row["Males a prendre total"]}/{row["Males stock"]}',
+            "Femelles a prendre": f'{row["Femelles a prendre total"]}/{row["Femelles stock"]}',
             "Paires prises": row["Total individus"] // 2,
             "Source": "Auto-fill G1" if row["Gen"] == 1 else "Stock reel",
             "% cible G10": row["% cible G10"],
@@ -298,6 +302,7 @@ def plan_session(stock: dict[str, StockEntry], session_capacity: int = SESSION_I
         "ratios_rows": ratios_rows,
         "auto_fill_pairs": auto_fill_pairs,
         "auto_fill_breakdown": auto_fill,
+        "include_auto_fill_g1": include_auto_fill_g1,
         "session_capacity": session_capacity,
         "capacity_pairs": capacity_pairs,
     }

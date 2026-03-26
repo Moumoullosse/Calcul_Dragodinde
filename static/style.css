@@ -144,7 +144,10 @@ h2 {
 }
 
 .session-row {
-  display: block;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 16px;
 }
 
 .session-card {
@@ -162,6 +165,42 @@ h2 {
 
 .field-help {
   margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.toggle-card {
+  display: flex;
+  flex: 1 1 320px;
+  gap: 14px;
+  align-items: flex-start;
+  min-width: 280px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, #fffaf4 0%, #f7edde 100%);
+  cursor: pointer;
+}
+
+.toggle-card input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  margin: 2px 0 0;
+  accent-color: var(--accent);
+  flex: 0 0 auto;
+}
+
+.toggle-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.toggle-title {
+  font-weight: 700;
+}
+
+.toggle-help {
   color: var(--muted);
   font-size: 0.92rem;
   line-height: 1.45;
@@ -376,6 +415,10 @@ tbody tr:hover {
 
   .session-card {
     max-width: none;
+  }
+
+  .toggle-card {
+    min-width: 0;
   }
 
   th,
