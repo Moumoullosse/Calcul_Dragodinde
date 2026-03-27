@@ -146,6 +146,7 @@ async def calculate(
 
 @app.post("/download-summary")
 async def download_summary(
+    request: Request,
     session_capacity: int = Form(SESSION_INDIVIDUAL_CAPACITY),
 ) -> PlainTextResponse:
     form = await request.form()
