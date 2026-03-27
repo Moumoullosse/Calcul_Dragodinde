@@ -280,21 +280,34 @@ input:focus {
 
 .form-actions {
   display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
   justify-content: flex-start;
 }
 
-.primary-btn {
+.primary-btn,
+.secondary-btn {
   padding: 14px 20px;
-  border: 0;
   border-radius: 999px;
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
-  color: white;
   font: inherit;
   font-weight: 700;
   letter-spacing: 0.01em;
   cursor: pointer;
-  box-shadow: 0 16px 28px rgba(123, 56, 20, 0.22);
   transition: transform 140ms ease, box-shadow 140ms ease, filter 140ms ease;
+}
+
+.primary-btn {
+  border: 0;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
+  color: white;
+  box-shadow: 0 16px 28px rgba(123, 56, 20, 0.22);
+}
+
+.secondary-btn {
+  border: 1px solid rgba(123, 56, 20, 0.22);
+  background: rgba(255, 250, 244, 0.9);
+  color: var(--accent-dark);
+  box-shadow: 0 12px 24px rgba(123, 56, 20, 0.1);
 }
 
 .primary-btn:hover {
@@ -303,7 +316,14 @@ input:focus {
   filter: saturate(1.05);
 }
 
-.primary-btn:active {
+.secondary-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 28px rgba(123, 56, 20, 0.14);
+  filter: saturate(1.02);
+}
+
+.primary-btn:active,
+.secondary-btn:active {
   transform: translateY(0);
 }
 
