@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Dragodinde">
+  <defs>
+    <linearGradient id="body" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#74f1e4"/>
+      <stop offset="100%" stop-color="#2db9b0"/>
+    </linearGradient>
+    <linearGradient id="shadow" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#2b6d74"/>
+      <stop offset="100%" stop-color="#1b4853"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="#fffaf4"/>
+  <path d="M12 26l7-9 4 3-5 10z" fill="url(#body)"/>
+  <path d="M18 31l8-8 10 2-6 9-10 2z" fill="url(#body)"/>
+  <path d="M26 22l7-7 9 3-5 8z" fill="url(#body)"/>
+  <path d="M35 18l8-4 9 5-2 8-10-2z" fill="url(#body)"/>
+  <circle cx="46" cy="22" r="7.5" fill="#ffffff"/>
+  <circle cx="47.5" cy="22" r="2.4" fill="#1f1c19"/>
+  <path d="M49 28l8 2-7 4z" fill="url(#shadow)"/>
+  <path d="M20 35l8 2-3 10-7-2z" fill="url(#shadow)"/>
+  <path d="M33 33l8 2-3 12-8-2z" fill="url(#shadow)"/>
+  <path d="M17 46l6 1-1 8-7 2-2-5z" fill="#d39f2d"/>
+  <path d="M30 47l7 1-1 8-8 2-2-5z" fill="#d39f2d"/>
+  <path d="M28 25l11 3" stroke="#1b4853" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M23 16l5-5" stroke="#1b4853" stroke-width="2.5" stroke-linecap="round"/>
+</svg>
