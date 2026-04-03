@@ -321,25 +321,23 @@ def plan_session(
             generation_remaining = max(0, generation_remaining - pairs_created)
             remaining_target_pairs[target_name] = max(0, remaining_target_pairs[target_name] - pairs_created)
 
-        if generation_remaining <= 0 or remaining_pairs_before <= 0:
-            continue
-
-        progress = True
-        while generation_remaining > 0 and remaining_pairs_before > 0 and progress:
-            progress = False
-            for target_name in generation_targets:
-                if generation_remaining <= 0 or remaining_pairs_before <= 0:
-                    break
-                pairs_created, remaining_pairs_before = _create_pairs_for_breed(
-                    target_name,
-                    generation_remaining,
-                    available,
-                    remaining_pairs_before,
-                    selection_rows,
-                )
-                if pairs_created > 0:
-                    generation_remaining = max(0, generation_remaining - pairs_created)
-                    progress = True
+        if generation_remaining > 0 and remaining_pairs_before > 0:
+            progress = True
+            while generation_remaining > 0 and remaining_pairs_before > 0 and progress:
+                progress = False
+                for target_name in generation_targets:
+                    if generation_remaining <= 0 or remaining_pairs_before <= 0:
+                        break
+                    pairs_created, remaining_pairs_before = _create_pairs_for_breed(
+                        target_name,
+                        generation_remaining,
+                        available,
+                        remaining_pairs_before,
+                        selection_rows,
+                    )
+                    if pairs_created > 0:
+                        generation_remaining = max(0, generation_remaining - pairs_created)
+                        progress = True
 
     planned_pairs = sum(row.pairs_created for row in selection_rows)
     auto_fill_pairs = max(0, capacity_pairs - planned_pairs) if include_auto_fill_g1 else 0
