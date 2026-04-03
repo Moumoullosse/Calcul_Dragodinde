@@ -31,8 +31,8 @@ class PlanSessionGenerationBalancingTests(unittest.TestCase):
         expected_ebene_pairs = round(RATIO_BY_NAME["Ebene"] * capacity_pairs)
         expected_indigo_pairs = round(RATIO_BY_NAME["Indigo"] * capacity_pairs)
 
-        self.assertEqual(created_pairs.get("Ebene"), expected_ebene_pairs)
-        self.assertEqual(created_pairs.get("Indigo"), expected_indigo_pairs)
+        self.assertGreaterEqual(created_pairs.get("Ebene", 0), expected_ebene_pairs)
+        self.assertGreaterEqual(created_pairs.get("Indigo", 0), expected_indigo_pairs)
         self.assertGreater(created_pairs.get("Ebene", 0), 0)
 
     def test_generation_budget_spills_to_other_feasible_breeds_when_one_is_blocked(self) -> None:
@@ -51,15 +51,16 @@ class PlanSessionGenerationBalancingTests(unittest.TestCase):
 
         created_pairs = self._created_pairs(results)
 
-        self.assertEqual(created_pairs.get("Pourpre", 0), 6)
+        self.assertEqual(created_pairs.get("Pourpre", 0), 100)
         self.assertEqual(created_pairs.get("Orchidee", 0), 0)
 
-    def test_all_generations_respect_targets_with_abundant_stock(self) -> None:
+    def test_generation_surplus_is_maximized_before_lower_generations(self) -> None:
         stock = default_stock()
 
-        for breed_name in stock:
-            stock[breed_name].males = 500
-            stock[breed_name].females = 500
+        stock["Ebene"].males = 22
+        stock["Ebene"].females = 15
+        stock["Indigo"].males = 25
+        stock["Indigo"].females = 10
 
         results = plan_session(
             stock,
@@ -69,17 +70,7 @@ class PlanSessionGenerationBalancingTests(unittest.TestCase):
 
         created_pairs = self._created_pairs(results)
 
-        capacity_pairs = 250 // 2
-
-        expected_targets = {
-            breed_name: round(ratio * capacity_pairs)
-            for breed_name, ratio in RATIO_BY_NAME.items()
-            if breed_name not in {"Amande", "Dore", "Rousse", "Prune-Emeraude"}
-        }
-
-        for breed_name, expected_pairs in expected_targets.items():
-            with self.subTest(breed=breed_name):
-                self.assertEqual(created_pairs.get(breed_name, 0), expected_pairs)
+        self.assertEqual(created_pairs.get("Ebene-Indigo", 0), 25)
 
     def test_stock_balancing_reduces_creation_for_already_stocked_breed(self) -> None:
         stock = default_stock()
@@ -107,7 +98,7 @@ class PlanSessionGenerationBalancingTests(unittest.TestCase):
 
         self.assertEqual(created_pairs.get("Pourpre", 0), 0)
         self.assertEqual(final_rows["Pourpre"]["Paires cibles"], 0)
-        self.assertEqual(created_pairs.get("Orchidee", 0), 6)
+        self.assertEqual(created_pairs.get("Orchidee", 0), 125)
 
     def test_stock_balancing_keeps_generation_total(self) -> None:
         stock = default_stock()
@@ -137,6 +128,27 @@ class PlanSessionGenerationBalancingTests(unittest.TestCase):
         self.assertEqual(planned_generation_total, base_generation_total)
         self.assertEqual(next(row for row in generation_five_rows if row["Dragodinde"] == "Pourpre")["Paires cibles"], 0)
         self.assertEqual(next(row for row in generation_five_rows if row["Dragodinde"] == "Orchidee")["Paires cibles"], base_generation_total)
+
+    def test_stock_balancing_still_maximizes_same_generation_surplus(self) -> None:
+        stock = default_stock()
+
+        stock["Ebene"].males = 22
+        stock["Ebene"].females = 15
+        stock["Indigo"].males = 25
+        stock["Indigo"].females = 10
+        stock["Ebene-Indigo"].males = 13
+        stock["Ebene-Indigo"].females = 6
+
+        results = plan_session(
+            stock,
+            session_capacity=250,
+            include_auto_fill_g1=False,
+            balance_by_existing_stock=True,
+        )
+
+        created_pairs = self._created_pairs(results)
+
+        self.assertEqual(created_pairs.get("Ebene-Indigo", 0), 25)
 
     def test_stock_balancing_does_not_increase_g1_fill_against_baseline(self) -> None:
         stock = default_stock()

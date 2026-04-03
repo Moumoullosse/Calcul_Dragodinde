@@ -273,6 +273,31 @@ def _create_pairs_for_breed(
     return pairs_created, remaining_pairs_after
 
 
+def _maximize_generation_surplus(
+    generation_targets: list[str],
+    priority_targets: list[str],
+    available: dict[str, StockEntry],
+    remaining_pairs_before: int,
+    selection_rows: list[SelectionRow],
+) -> int:
+    progress = True
+    while remaining_pairs_before > 0 and progress:
+        progress = False
+        for target_name in priority_targets:
+            if remaining_pairs_before <= 0:
+                break
+            pairs_created, remaining_pairs_before = _create_pairs_for_breed(
+                target_name,
+                remaining_pairs_before,
+                available,
+                remaining_pairs_before,
+                selection_rows,
+            )
+            if pairs_created > 0:
+                progress = True
+    return remaining_pairs_before
+
+
 def plan_session(
     stock: dict[str, StockEntry],
     session_capacity: int = SESSION_INDIVIDUAL_CAPACITY,
@@ -298,6 +323,11 @@ def plan_session(
             name for name in SELECTION_ORDER
             if BREED_BY_NAME[name].generation == generation
         ]
+        priority_targets = sorted(
+            generation_targets,
+            key=lambda name: (target_pairs_by_breed.get(name, 0), -SELECTION_ORDER.index(name)),
+            reverse=True,
+        )
         generation_budget = min(
             remaining_pairs_before,
             sum(target_pairs_by_breed.get(name, 0) for name in generation_targets),
@@ -338,6 +368,15 @@ def plan_session(
                     if pairs_created > 0:
                         generation_remaining = max(0, generation_remaining - pairs_created)
                         progress = True
+
+        if remaining_pairs_before > 0:
+            remaining_pairs_before = _maximize_generation_surplus(
+                generation_targets,
+                priority_targets,
+                available,
+                remaining_pairs_before,
+                selection_rows,
+            )
 
     planned_pairs = sum(row.pairs_created for row in selection_rows)
     auto_fill_pairs = max(0, capacity_pairs - planned_pairs) if include_auto_fill_g1 else 0
