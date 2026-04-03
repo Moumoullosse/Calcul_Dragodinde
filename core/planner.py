@@ -199,6 +199,80 @@ def _compute_created_pairs_map(selection_rows: list[SelectionRow]) -> dict[str, 
     return created
 
 
+def _create_pairs_for_breed(
+    target_name: str,
+    max_pairs: int,
+    available: dict[str, StockEntry],
+    remaining_pairs_before: int,
+    selection_rows: list[SelectionRow],
+) -> tuple[int, int]:
+    breed = BREED_BY_NAME[target_name]
+    parent1_name = breed.parent1 or ""
+    parent2_name = breed.parent2 or ""
+    parent1 = available[parent1_name]
+    parent2 = available[parent2_name]
+
+    if max_pairs <= 0 or remaining_pairs_before <= 0:
+        return 0, remaining_pairs_before
+
+    p1_m_remaining = parent1.males
+    p1_f_remaining = parent1.females
+    p2_m_remaining = parent2.males
+    p2_f_remaining = parent2.females
+
+    option_a = max(0, min(remaining_pairs_before, max_pairs, p1_f_remaining, p2_m_remaining))
+    option_b = max(0, min(remaining_pairs_before, max_pairs, p1_m_remaining, p2_f_remaining))
+
+    if option_a <= 0 and option_b <= 0:
+        return 0, remaining_pairs_before
+
+    if option_a >= option_b:
+        chosen_mode = "P1F + P2M"
+        pairs_created = option_a
+        p1_m_used = 0
+        p1_f_used = pairs_created
+        p2_m_used = pairs_created
+        p2_f_used = 0
+    else:
+        chosen_mode = "P1M + P2F"
+        pairs_created = option_b
+        p1_m_used = pairs_created
+        p1_f_used = 0
+        p2_m_used = 0
+        p2_f_used = pairs_created
+
+    parent1.males -= p1_m_used
+    parent1.females -= p1_f_used
+    parent2.males -= p2_m_used
+    parent2.females -= p2_f_used
+
+    selection_rows.append(
+        SelectionRow(
+            target=target_name,
+            generation=breed.generation,
+            parent1=parent1_name,
+            parent2=parent2_name,
+            remaining_pairs_before=remaining_pairs_before,
+            p1_m_remaining=p1_m_remaining,
+            p1_f_remaining=p1_f_remaining,
+            p2_m_remaining=p2_m_remaining,
+            p2_f_remaining=p2_f_remaining,
+            option_a=option_a,
+            option_b=option_b,
+            chosen_mode=chosen_mode,
+            pairs_created=pairs_created,
+            p1_m_used=p1_m_used,
+            p1_f_used=p1_f_used,
+            p2_m_used=p2_m_used,
+            p2_f_used=p2_f_used,
+            individuals_used=pairs_created * 2,
+        )
+    )
+
+    remaining_pairs_after = max(0, remaining_pairs_before - pairs_created)
+    return pairs_created, remaining_pairs_after
+
+
 def plan_session(
     stock: dict[str, StockEntry],
     session_capacity: int = SESSION_INDIVIDUAL_CAPACITY,
@@ -214,71 +288,58 @@ def plan_session(
 
     selection_rows: list[SelectionRow] = []
     remaining_pairs_before = capacity_pairs
+    generation_order = sorted(
+        {BREED_BY_NAME[name].generation for name in SELECTION_ORDER},
+        reverse=True,
+    )
 
-    for target_name in SELECTION_ORDER:
-        breed = BREED_BY_NAME[target_name]
-        parent1_name = breed.parent1 or ""
-        parent2_name = breed.parent2 or ""
-        parent1 = available[parent1_name]
-        parent2 = available[parent2_name]
-        remaining_target_pairs = target_pairs_by_breed.get(target_name, 0)
+    for generation in generation_order:
+        generation_targets = [
+            name for name in SELECTION_ORDER
+            if BREED_BY_NAME[name].generation == generation
+        ]
+        generation_budget = min(
+            remaining_pairs_before,
+            sum(target_pairs_by_breed.get(name, 0) for name in generation_targets),
+        )
+        generation_remaining = generation_budget
+        remaining_target_pairs = {
+            name: target_pairs_by_breed.get(name, 0)
+            for name in generation_targets
+        }
 
-        while remaining_pairs_before > 0 and remaining_target_pairs > 0:
-            p1_m_remaining = parent1.males
-            p1_f_remaining = parent1.females
-            p2_m_remaining = parent2.males
-            p2_f_remaining = parent2.females
-
-            option_a = max(0, min(remaining_pairs_before, remaining_target_pairs, p1_f_remaining, p2_m_remaining))
-            option_b = max(0, min(remaining_pairs_before, remaining_target_pairs, p1_m_remaining, p2_f_remaining))
-
-            if option_a <= 0 and option_b <= 0:
+        for target_name in generation_targets:
+            if generation_remaining <= 0 or remaining_pairs_before <= 0:
                 break
-
-            if option_a >= option_b:
-                chosen_mode = "P1F + P2M"
-                pairs_created = option_a
-                p1_m_used = 0
-                p1_f_used = pairs_created
-                p2_m_used = pairs_created
-                p2_f_used = 0
-            else:
-                chosen_mode = "P1M + P2F"
-                pairs_created = option_b
-                p1_m_used = pairs_created
-                p1_f_used = 0
-                p2_m_used = 0
-                p2_f_used = pairs_created
-
-            parent1.males -= p1_m_used
-            parent1.females -= p1_f_used
-            parent2.males -= p2_m_used
-            parent2.females -= p2_f_used
-
-            selection_rows.append(
-                SelectionRow(
-                    target=target_name,
-                    generation=breed.generation,
-                    parent1=parent1_name,
-                    parent2=parent2_name,
-                    remaining_pairs_before=remaining_pairs_before,
-                    p1_m_remaining=p1_m_remaining,
-                    p1_f_remaining=p1_f_remaining,
-                    p2_m_remaining=p2_m_remaining,
-                    p2_f_remaining=p2_f_remaining,
-                    option_a=option_a,
-                    option_b=option_b,
-                    chosen_mode=chosen_mode,
-                    pairs_created=pairs_created,
-                    p1_m_used=p1_m_used,
-                    p1_f_used=p1_f_used,
-                    p2_m_used=p2_m_used,
-                    p2_f_used=p2_f_used,
-                    individuals_used=pairs_created * 2,
-                )
+            pairs_created, remaining_pairs_before = _create_pairs_for_breed(
+                target_name,
+                min(generation_remaining, remaining_target_pairs[target_name]),
+                available,
+                remaining_pairs_before,
+                selection_rows,
             )
-            remaining_pairs_before = max(0, remaining_pairs_before - pairs_created)
-            remaining_target_pairs = max(0, remaining_target_pairs - pairs_created)
+            generation_remaining = max(0, generation_remaining - pairs_created)
+            remaining_target_pairs[target_name] = max(0, remaining_target_pairs[target_name] - pairs_created)
+
+        if generation_remaining <= 0 or remaining_pairs_before <= 0:
+            continue
+
+        progress = True
+        while generation_remaining > 0 and remaining_pairs_before > 0 and progress:
+            progress = False
+            for target_name in generation_targets:
+                if generation_remaining <= 0 or remaining_pairs_before <= 0:
+                    break
+                pairs_created, remaining_pairs_before = _create_pairs_for_breed(
+                    target_name,
+                    generation_remaining,
+                    available,
+                    remaining_pairs_before,
+                    selection_rows,
+                )
+                if pairs_created > 0:
+                    generation_remaining = max(0, generation_remaining - pairs_created)
+                    progress = True
 
     planned_pairs = sum(row.pairs_created for row in selection_rows)
     auto_fill_pairs = max(0, capacity_pairs - planned_pairs) if include_auto_fill_g1 else 0
