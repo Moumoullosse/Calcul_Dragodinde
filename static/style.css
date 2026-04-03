@@ -407,6 +407,10 @@ tbody tr:hover {
   background: rgba(240, 221, 202, 0.5);
 }
 
+.row-impossible {
+  background: rgba(169, 61, 61, 0.08) !important;
+}
+
 .delta-chip {
   display: inline-flex;
   min-width: 44px;
@@ -430,6 +434,32 @@ tbody tr:hover {
 .delta-under {
   background: rgba(169, 61, 61, 0.14);
   color: #8e2f2f;
+}
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.status-ok {
+  background: rgba(72, 138, 92, 0.16);
+  color: #2d6a3b;
+}
+
+.status-blocked {
+  background: rgba(169, 61, 61, 0.14);
+  color: #8e2f2f;
+}
+
+.status-neutral {
+  background: rgba(110, 101, 93, 0.14);
+  color: #6e655d;
 }
 
 @media (max-width: 980px) {

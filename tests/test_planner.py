@@ -189,6 +189,49 @@ class PlanSessionGenerationBalancingTests(unittest.TestCase):
             baseline_results["controls"]["Paires G1 ajoutees"],
         )
 
+    def test_real_created_pairs_stay_zero_when_required_parents_are_missing(self) -> None:
+        stock = default_stock()
+
+        stock["Amande-Rousse"].males = 18
+        stock["Amande-Rousse"].females = 16
+        stock["Amande-Dore"].males = 13
+        stock["Amande-Dore"].females = 14
+        stock["Dore-Rousse"].males = 9
+        stock["Dore-Rousse"].females = 12
+        stock["Ebene"].males = 22
+        stock["Ebene"].females = 15
+        stock["Indigo"].males = 25
+        stock["Indigo"].females = 10
+        stock["Ebene-Indigo"].males = 13
+        stock["Ebene-Indigo"].females = 6
+        stock["Pourpre"].males = 7
+        stock["Pourpre"].females = 7
+        stock["Orchidee"].males = 3
+        stock["Orchidee"].females = 4
+        stock["Ebene-Orchidee"].males = 0
+        stock["Ebene-Orchidee"].females = 2
+        stock["Orchidee-Pourpre"].males = 1
+        stock["Orchidee-Pourpre"].females = 1
+        stock["Indigo-Pourpre"].males = 2
+        stock["Indigo-Pourpre"].females = 2
+
+        results = plan_session(
+            stock,
+            session_capacity=250,
+            include_auto_fill_g1=True,
+            balance_by_existing_stock=True,
+        )
+
+        final_rows = {
+            row["Dragodinde"]: row
+            for row in results["final_rows"]
+        }
+
+        self.assertEqual(final_rows["Ivoire-Turquoise"]["Paires reellement creees"], 0)
+        self.assertFalse(final_rows["Ivoire-Turquoise"]["Creation realisable"])
+        self.assertGreaterEqual(final_rows["Turquoise"]["Paires reellement creees"], 1)
+        self.assertGreaterEqual(final_rows["Ivoire"]["Paires reellement creees"], 1)
+
 
 if __name__ == "__main__":
     unittest.main()

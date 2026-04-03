@@ -332,19 +332,29 @@
               <th>Gen</th>
               <th>Cible ratio G10</th>
               <th>Cible ajustee</th>
-              <th>Paires planifiees</th>
+              <th>Couples reels</th>
+              <th>Statut</th>
               <th>Ecart</th>
             </tr>
           </thead>
           <tbody>
             {% for row in results.final_rows %}
             {% if row["Gen"] > 1 %}
-            <tr>
+            <tr class="{% if row['Paires cibles'] > 0 and row['Paires reellement creees'] == 0 %}row-impossible{% endif %}">
               <td>{{ row["Dragodinde"] }}</td>
               <td>{{ row["Gen"] }}</td>
               <td>{{ row["Paires cibles ratio session"] }}</td>
               <td>{{ row["Paires cibles"] }}</td>
-              <td>{{ row["Total individus"] // 2 }}</td>
+              <td>{{ row["Paires reellement creees"] }}</td>
+              <td>
+                {% if row["Paires cibles"] <= 0 %}
+                <span class="status-chip status-neutral">Sans besoin</span>
+                {% elif row["Paires reellement creees"] > 0 %}
+                <span class="status-chip status-ok">Realisable</span>
+                {% else %}
+                <span class="status-chip status-blocked">Impossible avec ce stock</span>
+                {% endif %}
+              </td>
               <td>
                 <span class="delta-chip {% if row['Ecart paires'] == 0 %}delta-ok{% elif row['Ecart paires'] > 0 %}delta-over{% else %}delta-under{% endif %}">
                   {{ row["Ecart paires"] }}

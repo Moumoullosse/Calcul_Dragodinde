@@ -192,6 +192,13 @@ def _compute_usage_map(selection_rows: list[SelectionRow]) -> dict[str, dict[str
     return usage
 
 
+def _compute_created_pairs_map(selection_rows: list[SelectionRow]) -> dict[str, int]:
+    created = {breed.name: 0 for breed in BREEDS}
+    for row in selection_rows:
+        created[row.target] += row.pairs_created
+    return created
+
+
 def plan_session(
     stock: dict[str, StockEntry],
     session_capacity: int = SESSION_INDIVIDUAL_CAPACITY,
@@ -277,6 +284,7 @@ def plan_session(
     auto_fill_pairs = max(0, capacity_pairs - planned_pairs) if include_auto_fill_g1 else 0
     auto_fill = _build_auto_fill_pairs(auto_fill_pairs) if include_auto_fill_g1 else {}
     usage_map = _compute_usage_map(selection_rows)
+    created_pairs_map = _compute_created_pairs_map(selection_rows)
     total_individuals = planned_pairs * 2 + auto_fill_pairs * 2
 
     final_rows = []
@@ -285,6 +293,7 @@ def plan_session(
         used_males = usage_map[breed.name]["males"]
         used_females = usage_map[breed.name]["females"]
         auto_add = auto_fill.get(breed.name, 0)
+        created_pairs = created_pairs_map.get(breed.name, 0)
         males_total = used_males + auto_add
         females_total = used_females + auto_add
         individuals = males_total + females_total
@@ -310,6 +319,8 @@ def plan_session(
                 "Ecart vs cible": current_ratio - target_ratio,
                 "Paires cibles ratio session": base_target_pairs,
                 "Paires cibles": adjusted_target_pairs,
+                "Paires reellement creees": created_pairs,
+                "Creation realisable": created_pairs > 0,
                 "Ecart paires": (individuals // 2) - adjusted_target_pairs,
                 "Paires stock": stock_entry.pairs,
                 "Paires cibles G10": round(target_ratio * SESSION_PAIR_CAPACITY),
