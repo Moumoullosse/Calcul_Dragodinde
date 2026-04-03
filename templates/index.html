@@ -58,6 +58,19 @@
               <span class="toggle-help">Complete automatiquement avec Amande, Dore et Rousse si la session n'est pas remplie.</span>
             </span>
           </label>
+          <label class="toggle-card" for="balance_by_existing_stock">
+            <input
+              id="balance_by_existing_stock"
+              name="balance_by_existing_stock"
+              type="checkbox"
+              value="1"
+              {% if balance_by_existing_stock %}checked{% endif %}
+            >
+            <span class="toggle-copy">
+              <span class="toggle-title">Equilibrer selon le stock existant</span>
+              <span class="toggle-help">Favorise la creation des races en retard dans ton stock tout en restant aligne vers l'equilibre G10.</span>
+            </span>
+          </label>
         </div>
 
         <div class="stock-grid">
@@ -270,6 +283,9 @@
         </div>
         <p class="section-note">Tableau final a utiliser pour preparer ta session.</p>
       </div>
+      {% if results.balance_by_existing_stock %}
+      <p class="empty-state">Mode actif : les paires cibles sont ajustees selon le stock deja disponible pour rattraper les races en retard vers l'equilibre G10.</p>
+      {% endif %}
       {% if results.plan_rows %}
       <div class="table-wrap">
         <table>
@@ -298,6 +314,48 @@
       {% else %}
       <p class="empty-state">Aucun stock a prendre pour cette configuration sans remplissage automatique de Gen 1.</p>
       {% endif %}
+    </section>
+
+    <section class="panel">
+      <div class="section-head">
+        <div>
+          <p class="section-kicker">Controle</p>
+          <h2>Equilibrage des paires</h2>
+        </div>
+        <p class="section-note">Compare la cible theorique et le nombre de paires reellement planifiees pour chaque race.</p>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Dragodinde</th>
+              <th>Gen</th>
+              <th>Cible ratio G10</th>
+              <th>Cible ajustee</th>
+              <th>Paires planifiees</th>
+              <th>Ecart</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in results.final_rows %}
+            {% if row["Gen"] > 1 %}
+            <tr>
+              <td>{{ row["Dragodinde"] }}</td>
+              <td>{{ row["Gen"] }}</td>
+              <td>{{ row["Paires cibles ratio session"] }}</td>
+              <td>{{ row["Paires cibles"] }}</td>
+              <td>{{ row["Total individus"] // 2 }}</td>
+              <td>
+                <span class="delta-chip {% if row['Ecart paires'] == 0 %}delta-ok{% elif row['Ecart paires'] > 0 %}delta-over{% else %}delta-under{% endif %}">
+                  {{ row["Ecart paires"] }}
+                </span>
+              </td>
+            </tr>
+            {% endif %}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
     </section>
   </div>
 </body>

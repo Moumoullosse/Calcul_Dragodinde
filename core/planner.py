@@ -67,6 +67,91 @@ def _build_ratio_rows() -> list[dict[str, object]]:
     return rows
 
 
+def _target_pairs_for_capacity(capacity_pairs: int) -> dict[str, int]:
+    targets: dict[str, int] = {}
+    for breed in BREEDS:
+        if breed.generation <= 1:
+            continue
+        targets[breed.name] = max(0, round(RATIO_BY_NAME[breed.name] * capacity_pairs))
+    return targets
+
+
+def _allocate_weighted_pairs(
+    capacity_pairs: int,
+    weights: dict[str, int],
+    caps: dict[str, int] | None = None,
+) -> dict[str, int]:
+    allocations = {name: 0 for name in weights}
+    remaining_pairs = max(0, capacity_pairs)
+    active = {
+        name
+        for name, weight in weights.items()
+        if weight > 0 and (caps is None or caps.get(name, 0) > 0)
+    }
+
+    while remaining_pairs > 0 and active:
+        total_weight = sum(weights[name] for name in active)
+        if total_weight <= 0:
+            break
+
+        assigned_this_round = 0
+        remainders: list[tuple[float, str]] = []
+
+        for name in active:
+            remaining_cap = caps.get(name, remaining_pairs) - allocations[name] if caps is not None else remaining_pairs
+            if remaining_cap <= 0:
+                continue
+            raw_share = remaining_pairs * weights[name] / total_weight
+            whole_share = min(remaining_cap, int(raw_share))
+            if whole_share > 0:
+                allocations[name] += whole_share
+                assigned_this_round += whole_share
+            remainders.append((raw_share - int(raw_share), name))
+
+        remaining_pairs -= assigned_this_round
+        active = {
+            name
+            for name in active
+            if caps is None or allocations[name] < caps.get(name, 0)
+        }
+
+        if remaining_pairs <= 0 or not active:
+            break
+
+        assigned_by_remainder = 0
+        for _, name in sorted(remainders, reverse=True):
+            if name not in active or remaining_pairs <= 0:
+                continue
+            allocations[name] += 1
+            remaining_pairs -= 1
+            assigned_by_remainder += 1
+            if caps is not None and allocations[name] >= caps.get(name, 0):
+                active.discard(name)
+
+        if assigned_this_round == 0 and assigned_by_remainder == 0:
+            break
+
+    return allocations
+
+
+def _target_pairs_for_stock_balance(
+    stock: dict[str, StockEntry],
+    capacity_pairs: int,
+) -> dict[str, int]:
+    deficits: dict[str, int] = {}
+    for breed in BREEDS:
+        if breed.generation <= 1:
+            continue
+        target_stock_pairs = round(RATIO_BY_NAME[breed.name] * SESSION_PAIR_CAPACITY)
+        current_stock_pairs = stock.get(breed.name, StockEntry()).pairs
+        deficits[breed.name] = max(0, target_stock_pairs - current_stock_pairs)
+
+    if sum(deficits.values()) <= 0:
+        return _target_pairs_for_capacity(capacity_pairs)
+
+    return _allocate_weighted_pairs(capacity_pairs, deficits, deficits)
+
+
 def _build_auto_fill_pairs(missing_pairs: int) -> dict[str, int]:
     total_weight = sum(AUTO_FILL_G1.values())
     values: dict[str, int] = {}
@@ -96,9 +181,14 @@ def plan_session(
     stock: dict[str, StockEntry],
     session_capacity: int = SESSION_INDIVIDUAL_CAPACITY,
     include_auto_fill_g1: bool = True,
+    balance_by_existing_stock: bool = False,
 ) -> dict[str, object]:
     capacity_pairs = max(session_capacity // 2, 0)
     available = {name: StockEntry(entry.males, entry.females) for name, entry in stock.items()}
+    if balance_by_existing_stock:
+        target_pairs_by_breed = _target_pairs_for_stock_balance(stock, capacity_pairs)
+    else:
+        target_pairs_by_breed = _target_pairs_for_capacity(capacity_pairs)
 
     selection_rows: list[SelectionRow] = []
     remaining_pairs_before = capacity_pairs
@@ -109,15 +199,16 @@ def plan_session(
         parent2_name = breed.parent2 or ""
         parent1 = available[parent1_name]
         parent2 = available[parent2_name]
+        remaining_target_pairs = target_pairs_by_breed.get(target_name, 0)
 
-        while remaining_pairs_before > 0:
+        while remaining_pairs_before > 0 and remaining_target_pairs > 0:
             p1_m_remaining = parent1.males
             p1_f_remaining = parent1.females
             p2_m_remaining = parent2.males
             p2_f_remaining = parent2.females
 
-            option_a = max(0, min(remaining_pairs_before, p1_f_remaining, p2_m_remaining))
-            option_b = max(0, min(remaining_pairs_before, p1_m_remaining, p2_f_remaining))
+            option_a = max(0, min(remaining_pairs_before, remaining_target_pairs, p1_f_remaining, p2_m_remaining))
+            option_b = max(0, min(remaining_pairs_before, remaining_target_pairs, p1_m_remaining, p2_f_remaining))
 
             if option_a <= 0 and option_b <= 0:
                 break
@@ -165,6 +256,7 @@ def plan_session(
                 )
             )
             remaining_pairs_before = max(0, remaining_pairs_before - pairs_created)
+            remaining_target_pairs = max(0, remaining_target_pairs - pairs_created)
 
     planned_pairs = sum(row.pairs_created for row in selection_rows)
     auto_fill_pairs = max(0, capacity_pairs - planned_pairs) if include_auto_fill_g1 else 0
@@ -183,6 +275,8 @@ def plan_session(
         individuals = males_total + females_total
         target_ratio = RATIO_BY_NAME[breed.name]
         current_ratio = individuals / total_individuals if total_individuals else 0.0
+        base_target_pairs = round(target_ratio * capacity_pairs)
+        adjusted_target_pairs = target_pairs_by_breed.get(breed.name, base_target_pairs)
         final_rows.append(
             {
                 "Dragodinde": breed.name,
@@ -199,14 +293,15 @@ def plan_session(
                 "% cible G10": target_ratio,
                 "% selection actuelle": current_ratio,
                 "Ecart vs cible": current_ratio - target_ratio,
-                "Paires cibles": round(target_ratio * capacity_pairs),
-                "Ecart paires": (individuals // 2) - round(target_ratio * capacity_pairs),
+                "Paires cibles ratio session": base_target_pairs,
+                "Paires cibles": adjusted_target_pairs,
+                "Ecart paires": (individuals // 2) - adjusted_target_pairs,
                 "Paires stock": stock_entry.pairs,
                 "Paires cibles G10": round(target_ratio * SESSION_PAIR_CAPACITY),
                 "Paires reco stock": 0 if breed.generation == 1 else min(stock_entry.pairs, round(target_ratio * SESSION_PAIR_CAPACITY)),
                 "Individus reco stock": 0 if breed.generation == 1 else min(stock_entry.pairs, round(target_ratio * SESSION_PAIR_CAPACITY)) * 2,
                 "Ecart paires stock vs cible": stock_entry.pairs - round(target_ratio * SESSION_PAIR_CAPACITY),
-                "Regle": "Auto-fill G1 seulement" if breed.generation == 1 else "Prendre selon stock/cible",
+                "Regle": "Auto-fill G1 seulement" if breed.generation == 1 else ("Equilibrage selon stock existant" if balance_by_existing_stock else "Prendre selon stock/cible"),
             }
         )
 
@@ -303,6 +398,7 @@ def plan_session(
         "auto_fill_pairs": auto_fill_pairs,
         "auto_fill_breakdown": auto_fill,
         "include_auto_fill_g1": include_auto_fill_g1,
+        "balance_by_existing_stock": balance_by_existing_stock,
         "session_capacity": session_capacity,
         "capacity_pairs": capacity_pairs,
     }

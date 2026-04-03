@@ -41,8 +41,9 @@ def _build_export_content(
     stock: dict[str, StockEntry],
     session_capacity: int,
     include_auto_fill_g1: bool,
+    balance_by_existing_stock: bool,
 ) -> str:
-    results = plan_session(stock, session_capacity, include_auto_fill_g1)
+    results = plan_session(stock, session_capacity, include_auto_fill_g1, balance_by_existing_stock)
 
     lines = [
         "Resume planificateur Dragodindes",
@@ -51,6 +52,7 @@ def _build_export_content(
         "Parametres",
         f"- Capacite de session : {session_capacity}",
         f"- Remplissage automatique Gen 1 : {'Oui' if include_auto_fill_g1 else 'Non'}",
+        f"- Equilibrage des couples selon stock existant : {'Oui' if balance_by_existing_stock else 'Non'}",
         "",
         "Controle",
     ]
@@ -104,8 +106,9 @@ def _render(
     stock: dict[str, StockEntry],
     session_capacity: int,
     include_auto_fill_g1: bool,
+    balance_by_existing_stock: bool,
 ) -> HTMLResponse:
-    results = _serialize_results(plan_session(stock, session_capacity, include_auto_fill_g1))
+    results = _serialize_results(plan_session(stock, session_capacity, include_auto_fill_g1, balance_by_existing_stock))
     stock_rows = [
         {
             "name": breed.name,
@@ -122,6 +125,7 @@ def _render(
             "stock_rows": stock_rows,
             "session_capacity": session_capacity,
             "include_auto_fill_g1": include_auto_fill_g1,
+            "balance_by_existing_stock": balance_by_existing_stock,
             "results": results,
         },
     )
@@ -129,7 +133,7 @@ def _render(
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request) -> HTMLResponse:
-    return _render(request, default_stock(), SESSION_INDIVIDUAL_CAPACITY, True)
+    return _render(request, default_stock(), SESSION_INDIVIDUAL_CAPACITY, True, False)
 
 
 @app.post("/", response_class=HTMLResponse)
@@ -141,7 +145,8 @@ async def calculate(
     form_data = dict(form)
     stock = _stock_from_form(form_data)
     include_auto_fill_g1 = "include_auto_fill_g1" in form_data
-    return _render(request, stock, session_capacity, include_auto_fill_g1)
+    balance_by_existing_stock = "balance_by_existing_stock" in form_data
+    return _render(request, stock, session_capacity, include_auto_fill_g1, balance_by_existing_stock)
 
 
 @app.post("/download-summary")
@@ -153,7 +158,8 @@ async def download_summary(
     form_data = dict(form)
     stock = _stock_from_form(form_data)
     include_auto_fill_g1 = "include_auto_fill_g1" in form_data
-    content = _build_export_content(stock, session_capacity, include_auto_fill_g1)
+    balance_by_existing_stock = "balance_by_existing_stock" in form_data
+    content = _build_export_content(stock, session_capacity, include_auto_fill_g1, balance_by_existing_stock)
     filename = f"resume_dragodindes_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
     headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
     return PlainTextResponse(content, headers=headers)
