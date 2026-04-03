@@ -138,18 +138,33 @@ def _target_pairs_for_stock_balance(
     stock: dict[str, StockEntry],
     capacity_pairs: int,
 ) -> dict[str, int]:
-    deficits: dict[str, int] = {}
-    for breed in BREEDS:
-        if breed.generation <= 1:
+    base_targets = _target_pairs_for_capacity(capacity_pairs)
+    targets = {name: 0 for name in base_targets}
+
+    for generation in sorted({breed.generation for breed in BREEDS if breed.generation > 1}):
+        generation_breeds = [breed for breed in BREEDS if breed.generation == generation]
+        generation_total = sum(base_targets.get(breed.name, 0) for breed in generation_breeds)
+        if generation_total <= 0:
             continue
-        target_stock_pairs = round(RATIO_BY_NAME[breed.name] * SESSION_PAIR_CAPACITY)
-        current_stock_pairs = stock.get(breed.name, StockEntry()).pairs
-        deficits[breed.name] = max(0, target_stock_pairs - current_stock_pairs)
 
-    if sum(deficits.values()) <= 0:
-        return _target_pairs_for_capacity(capacity_pairs)
+        deficits = {}
+        for breed in generation_breeds:
+            target_stock_pairs = round(RATIO_BY_NAME[breed.name] * SESSION_PAIR_CAPACITY)
+            current_stock_pairs = stock.get(breed.name, StockEntry()).pairs
+            deficits[breed.name] = max(0, target_stock_pairs - current_stock_pairs)
 
-    return _allocate_weighted_pairs(capacity_pairs, deficits, deficits)
+        if sum(deficits.values()) <= 0:
+            generation_targets = {
+                breed.name: base_targets.get(breed.name, 0)
+                for breed in generation_breeds
+            }
+        else:
+            generation_targets = _allocate_weighted_pairs(generation_total, deficits)
+
+        for breed in generation_breeds:
+            targets[breed.name] = generation_targets.get(breed.name, 0)
+
+    return targets
 
 
 def _build_auto_fill_pairs(missing_pairs: int) -> dict[str, int]:

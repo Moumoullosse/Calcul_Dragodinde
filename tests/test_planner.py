@@ -131,6 +131,64 @@ class PlanSessionGenerationBalancingTests(unittest.TestCase):
         self.assertEqual(final_rows["Pourpre"]["Paires cibles"], 0)
         self.assertGreaterEqual(created_pairs.get("Indigo", 0), 1)
 
+    def test_stock_balancing_keeps_generation_total(self) -> None:
+        stock = default_stock()
+
+        for breed_name in ("Amande-Dore", "Amande-Rousse", "Dore-Rousse", "Ebene-Indigo"):
+            stock[breed_name].males = 200
+            stock[breed_name].females = 200
+
+        # G5 already has Pourpre in stock, so the generation budget should shift to Orchidee,
+        # not disappear from generation 5.
+        stock["Pourpre"].males = round(RATIO_BY_NAME["Pourpre"] * SESSION_PAIR_CAPACITY)
+        stock["Pourpre"].females = round(RATIO_BY_NAME["Pourpre"] * SESSION_PAIR_CAPACITY)
+
+        results = plan_session(
+            stock,
+            session_capacity=250,
+            include_auto_fill_g1=False,
+            balance_by_existing_stock=True,
+        )
+
+        final_rows = results["final_rows"]
+        generation_five_rows = [row for row in final_rows if row["Gen"] == 5]
+
+        planned_generation_total = sum(row["Paires cibles"] for row in generation_five_rows)
+        base_generation_total = sum(row["Paires cibles ratio session"] for row in generation_five_rows)
+
+        self.assertEqual(planned_generation_total, base_generation_total)
+        self.assertEqual(next(row for row in generation_five_rows if row["Dragodinde"] == "Pourpre")["Paires cibles"], 0)
+        self.assertEqual(next(row for row in generation_five_rows if row["Dragodinde"] == "Orchidee")["Paires cibles"], base_generation_total)
+
+    def test_stock_balancing_does_not_increase_g1_fill_against_baseline(self) -> None:
+        stock = default_stock()
+
+        for breed_name in stock:
+            stock[breed_name].males = 200
+            stock[breed_name].females = 200
+
+        stock["Pourpre"].males = round(RATIO_BY_NAME["Pourpre"] * SESSION_PAIR_CAPACITY)
+        stock["Pourpre"].females = round(RATIO_BY_NAME["Pourpre"] * SESSION_PAIR_CAPACITY)
+
+        baseline_results = plan_session(
+            stock,
+            session_capacity=250,
+            include_auto_fill_g1=True,
+            balance_by_existing_stock=False,
+        )
+
+        balanced_results = plan_session(
+            stock,
+            session_capacity=250,
+            include_auto_fill_g1=True,
+            balance_by_existing_stock=True,
+        )
+
+        self.assertEqual(
+            balanced_results["controls"]["Paires G1 ajoutees"],
+            baseline_results["controls"]["Paires G1 ajoutees"],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
